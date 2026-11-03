@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backstop — Live Hinglish Voice Studio (Multi-Turn Gemini LLM + Mic + TTS)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #F8F9FB;
+    --surface: #FFFFFF;
+    --surface-muted: #F3F5F8;
+    --ink: #111827;
+    --ink-secondary: #374151;
+    --muted: #64748B;
+    --line: #E2E8F0;
+    --indigo: #2947B8;
+    --indigo-soft: #EDF1FF;
+    --indigo-border: #C7D4FF;
+    --green: #087A56;
+    --green-soft: #EAF7F0;
+    --green-border: #B8E4CE;
+    --amber: #9A5B00;
+    --amber-soft: #FFF6E0;
+    --red: #B42318;
+    --red-soft: #FFF0EF;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+  .topbar {
+    height: 58px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: var(--indigo);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  .brand-name {
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -0.03em;
+  }
+  .sim-badge {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--indigo);
+    background: var(--indigo-soft);
+    border: 1px solid var(--indigo-border);
+    padding: 3px 9px;
+    border-radius: 5px;
+  }
+  .sim-badge.gemini-live {
+    color: var(--green);
+    background: var(--green-soft);
+    border-color: var(--green-border);
+  }
+  .top-links {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-nav {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-secondary);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .btn-nav:hover { background: var(--surface-muted); color: var(--ink); }
+
+  .container {
+    width: 100%;
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 20px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Gemini API Key Configuration Strip */
+  .gemini-config-bar {
+    background: var(--surface);
+    border: 1px solid var(--indigo-border);
+    padding: 10px 18px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 2px rgba(41, 71, 184, 0.05);
+  }
+  .gemini-config-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--ink-secondary);
+  }
+  .gemini-config-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 540px;
+    justify-content: flex-end;
+  }
+  .key-input {
+    flex: 1;
+    height: 32px;
+    padding: 0 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--canvas);
+    color: var(--ink);
+    outline: none;
+  }
+  .key-input:focus { border-color: var(--indigo); background: var(--surface); }
+  .btn-connect-key {
+    height: 32px;
+    padding: 0 14px;
+    background: var(--indigo);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-connect-key:hover { background: #1E3696; }
+
+  .call-header {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(17,24,39,0.03);
+  }
+  .call-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .live-dot {
+    width: 10px;
+    height: 10px;
+    background: #10B981;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.18);
+  }
+  .call-title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .call-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .call-meta-pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .case-select {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .pill {
+    font-size: 12px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    background: var(--surface-muted);
+    color: var(--ink-secondary);
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .pill-strong {
+    background: var(--indigo-soft);
+    color: var(--indigo);
+    border-color: var(--indigo-border);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1.22fr 0.78fr;
+    gap: 18px;
+  }
+  .call-panel, .inspector-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    height: 640px;
+    box-shadow: 0 1px 2px rgba(17,24,39,0.03);
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #FAFBFC;
+  }
+  .panel-title {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .chat-transcript {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .msg-row {
+    display: flex;
+    flex-direction: column;
+    max-width: 82%;
+  }
+  .msg-agent { align-self: flex-start; }
+  .msg-user { align-self: flex-end; }
+  .msg-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-replay-tts {
+    background: var(--surface-muted);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    cursor: pointer;
+    color: var(--ink-secondary);
+  }
+  .btn-replay-tts:hover { background: var(--indigo-soft); color: var(--indigo); }
+  .bubble {
+    padding: 11px 15px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .bubble-agent {
+    background: var(--surface-muted);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-top-left-radius: 3px;
+  }
+  .bubble-user {
+    background: var(--indigo);
+    color: #FFFFFF;
+    border-top-right-radius: 3px;
+  }
+
+  .audio-studio-bar {
+    padding: 10px 20px;
+    background: #F8FAFF;
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .mic-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-mic {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: none;
+    background: var(--indigo);
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 1px 2px rgba(41,71,184,0.25);
+  }
+  .btn-mic.listening {
+    background: #DC2626;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.2);
+  }
+  .waveform-bars {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 26px;
+    padding: 0 9px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .wave-bar {
+    width: 3px;
+    height: 4px;
+    background: var(--indigo);
+    border-radius: 2px;
+    transition: height 0.08s ease;
+  }
+  .audio-status-text {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .tts-toggle-btn {
+    font-size: 11.5px;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-secondary);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .tts-toggle-btn.active {
+    background: var(--green-soft);
+    color: var(--green);
+    border-color: var(--green-border);
+  }
+
+  .presets-shelf {
+    padding: 10px 20px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .presets-label {
+    font-size: 10.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+  }
+  .presets-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip-btn {
+    font-family: var(--sans);
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 4px 10px;
+    background: var(--surface-muted);
+    border: 1px solid var(--line);
+    color: var(--ink-secondary);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.12s ease;
+  }
+  .chip-btn:hover {
+    background: var(--indigo-soft);
+    color: var(--indigo);
+    border-color: var(--indigo-border);
+  }
+
+  .chat-input-bar {
+    padding: 10px 20px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 8px;
+    background: var(--surface);
+  }
+  .chat-input {
+    flex: 1;
+    font-family: var(--sans);
+    font-size: 13px;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 7px;
+    outline: none;
+  }
+  .chat-input:focus { border-color: var(--indigo); background: var(--surface); }
+  .btn-send {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    height: 36px;
+    padding: 0 16px;
+    background: var(--indigo);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    border-radius: 7px;
+    font-weight: 600;
+  }
+
+  .inspector-content {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  .indicator-card {
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 11px 14px;
+  }
+  .indicator-label {
+    font-size: 10.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-bottom: 5px;
+  }
+  .indicator-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .intent-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--indigo-soft);
+    color: var(--indigo);
+  }
+  .rule-pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 5px;
+  }
+  .state-step-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .state-node {
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 5px;
+  }
+  .state-node.active {
+    background: var(--indigo);
+    color: #fff;
+    border-color: var(--indigo);
+    font-weight: 600;
+  }
+  .outcome-box {
+    border-left: 3px solid var(--green);
+    background: var(--green-soft);
+    padding: 12px 14px;
+    font-size: 12px;
+    border-radius: 0 8px 8px 0;
+  }
+  .outcome-box.debit { border-left-color: var(--red); background: var(--red-soft); }
+  .outcome-box.info { border-left-color: var(--indigo); background: var(--indigo-soft); }
+  .outcome-title { font-weight: 700; margin-bottom: 4px; }
+  .btn-paylink-sim {
+    margin-top: 8px;
+    width: 100%;
+    height: 32px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .audit-feed {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  .audit-entry {
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--line);
+  }
+  .audit-time { color: var(--muted); margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand-row">
+    <div class="brand-mark">B</div>
+    <span class="brand-name">BACKSTOP VOICE STUDIO</span>
+    <span class="sim-badge" id="llm-engine-badge">Multi-Turn Conversational Engine Ready</span>
+  </div>
+  <div class="top-links">
+    <a href="/" class="btn-nav">&larr; Command Center</a>
+    <a href="/report" target="_blank" class="btn-nav">Live Executive Report &nearr;</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Live Gemini LLM Key Connection Bar -->
+  <div class="gemini-config-bar">
+    <div class="gemini-config-left">
+      <strong style="color:var(--indigo);">✨ Live Gemini LLM Integration:</strong>
+      <span id="gemini-status-label">Paste your Google Gemini API key (`AIza...`) to power open-ended multi-turn Hinglish dialogue with `gemini-2.5-flash` (or chat immediately using the built-in multi-turn engine).</span>
+    </div>
+    <div class="gemini-config-right">
+      <input type="password" id="gemini-api-key-input" class="key-input" placeholder="Paste GEMINI_API_KEY (AIzaSy...)" />
+      <button class="btn-connect-key" onclick="saveGeminiApiKey()">Connect Gemini LLM</button>
+    </div>
+  </div>
+
+  <!-- Call Header -->
+  <div class="call-header">
+    <div class="call-identity">
+      <div class="live-dot" id="call-dot"></div>
+      <div>
+        <div class="call-title">Multi-Turn Hinglish Voice Recovery Agent</div>
+        <div class="call-subtitle">Supports Hindi (Devanagari), Hinglish &amp; English · Never hangs up prematurely · Synced with Command Center</div>
+      </div>
+    </div>
+    <div class="call-meta-pills">
+      <select id="case-selector" class="case-select" onchange="onSelectCaseChange()"></select>
+      <div class="pill">Customer: <strong id="cust-name">Rohan Gupta</strong></div>
+      <div class="pill">Phone: <strong id="cust-phone">+91 98*** **210</strong></div>
+      <div class="pill pill-strong" id="cust-amount">Due: ₹14,500</div>
+      <button class="btn-nav" onclick="initCall()">&#x21bb; Restart Call</button>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="call-panel">
+      <div class="panel-header">
+        <span class="panel-title">Live Multi-Turn Call Transcript</span>
+        <span class="pill" id="call-status-badge">CONNECTED · MULTI-TURN ACTIVE</span>
+      </div>
+
+      <div class="chat-transcript" id="chat-stream"></div>
+
+      <div class="audio-studio-bar">
+        <div class="mic-controls">
+          <button class="btn-mic" id="btn-mic-toggle" onclick="toggleMicrophone()">
+            <span>🎙️</span>
+            <span id="mic-btn-label">Click to Speak (Mic Input)</span>
+          </button>
+          <select id="speech-lang-select" class="case-select" title="Speech Recognition Language">
+            <option value="en-IN">Hinglish / Indian English (en-IN)</option>
+            <option value="hi-IN">Hindi / Hinglish (hi-IN)</option>
+          </select>
+          <div class="waveform-bars" id="waveform-bars">
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          </div>
+          <span class="audio-status-text" id="audio-status-text">Mic ready</span>
+        </div>
+        <button class="tts-toggle-btn active" id="btn-tts-toggle" onclick="toggleTTS()">
+          🔊 Agent Voice TTS: ON
+        </button>
+      </div>
+
+      <div class="presets-shelf">
+        <div class="presets-label">Multi-Turn Conversation &amp; Objection Chips (Click in any order):</div>
+        <div class="presets-container">
+          <button class="chip-btn" onclick="sendPreset(0)">1. "Haan boliye, kis cheez ka payment hai?"</button>
+          <button class="chip-btn" onclick="sendPreset(1)">2. "Thoda discount milega kya?"</button>
+          <button class="chip-btn" onclick="sendPreset(2)">3. "Salary aane do 5th ko"</button>
+          <button class="chip-btn" onclick="sendPreset(3)">4. "Mujhe WhatsApp pe link bhej do"</button>
+          <button class="chip-btn" onclick="sendPreset(4)">5. "Haan, abhi kar deta hu GPay se"</button>
+          <button class="chip-btn" onclick="sendPreset(5)">6. "Maine kal UPI se pay kiya tha" (Freeze)</button>
+          <button class="chip-btn" onclick="sendPreset(6)">7. "Invoice galat hai" (Dispute)</button>
+          <button class="chip-btn" onclick="sendPreset(7)">8. "Theek hai shukriya, bye" (End Call)</button>
+        </div>
+      </div>
+
+      <div class="chat-input-bar">
+        <input type="text" id="cust-input" class="chat-input" placeholder="Speak with microphone or type anything in Hinglish, Hindi, or English..." onkeydown="if(event.key==='Enter') submitCustInput()" />
+        <button class="btn-send" onclick="submitCustInput()">Send Reply</button>
+      </div>
+    </div>
+
+    <div class="inspector-panel">
+      <div class="panel-header">
+        <span class="panel-title">Deterministic Guardrail Sidecar</span>
+        <span class="pill" style="color:var(--green); background:var(--green-soft);" id="insp-source-pill">MULTI-TURN ENGINE</span>
+      </div>
+
+      <div class="inspector-content">
+        <div class="indicator-card">
+          <div class="indicator-label">Detected Customer Intent</div>
+          <div class="indicator-value">
+            <span id="insp-intent" class="intent-badge">GREETING_STAGED</span>
+            <span id="insp-conf" style="font-size:12px; color:var(--muted)">100%</span>
+          </div>
+        </div>
+
+        <div class="indicator-card">
+          <div class="indicator-label">Fired Policy Rule</div>
+          <div>
+            <span class="rule-pill" id="insp-rule">RULE_OUTBOUND_GREETING_STAGE</span>
+          </div>
+        </div>
+
+        <div class="indicator-card">
+          <div class="indicator-label">Live Case State Transition</div>
+          <div class="state-step-flow">
+            <div class="state-node" id="sn-from">READY</div>
+            <span>&rarr;</span>
+            <div class="state-node active" id="sn-to">READY</div>
+          </div>
+        </div>
+
+        <div id="insp-action-card" class="outcome-box info" style="display:none;">
+          <div class="outcome-title" id="action-title">Action Scheduled</div>
+          <div id="action-desc">No dispatch yet.</div>
+          <button id="btn-sim-paylink" class="btn-paylink-sim" style="display:none;" onclick="simulateCustomerPaylinkPayment()">
+            Simulate Customer Clicking WhatsApp Link &amp; Paying Now
+          </button>
+        </div>
+
+        <div class="indicator-card" style="flex:1;">
+          <div class="indicator-label">Audit Event Stream (Synced to Dashboard)</div>
+          <div class="audit-feed" id="audit-feed"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PRESETS = [
+  "Haan boliye, yeh kis cheez ka payment pending dikha raha hai?",
+  "Abhi thoda tight hai, kya ispe thoda discount ya waiver mil sakta hai?",
+  "Bhaiya abhi salary nahi aayi, 5 tareekh ko transfer karunga",
+  "Mujhe WhatsApp pe payment link bhej do, main check karta hu",
+  "Haan, abhi kar deta hu GPay se",
+  "Maine kal shaam ko hi UPI se pay kar diya tha, baar baar kyu call kar rahe ho?",
+  "Invoice galat hai, discount nahi laga tha",
+  "Theek hai bahut shukriya, bye!"
+];
+
+let activeCaseId = null;
+let activeCustomerName = "Rohan Gupta";
+let activeAmount = 14500;
+let callEnded = false;
+let currentState = "READY";
+let ttsEnabled = true;
+let recognition = null;
+let isListening = false;
+let audioCtx = null;
+let analyser = null;
+let micStream = null;
+let animFrameId = null;
+
+async function checkGeminiConfig() {
+  const savedLocal = localStorage.getItem('backstop_gemini_api_key') || '';
+  if (savedLocal) {
+    document.getElementById('gemini-api-key-input').value = savedLocal;
+  }
+  try {
+    const res = await fetch('/api/voice/config');
+    const data = await res.json();
+    if (data.gemini_configured) {
+      updateGeminiUIStatus(true, data.masked_key);
+    } else if (savedLocal) {
+      await saveGeminiApiKey(true);
+    }
+  } catch (e) {}
+}
+
+async function saveGeminiApiKey(silent = false) {
+  const key = document.getElementById('gemini-api-key-input').value.trim();
+  localStorage.setItem('backstop_gemini_api_key', key);
+  try {
+    const res = await fetch('/api/voice/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: key })
+    });
+    const data = await res.json();
+    updateGeminiUIStatus(data.gemini_configured, data.masked_key);
+    if (!silent) {
+      logAudit("GEMINI_CONFIG", data.gemini_configured ? `Connected Live Gemini LLM (${data.masked_key})` : "Switched to built-in multi-turn engine.");
+    }
+  } catch (e) {}
+}
+
+function updateGeminiUIStatus(isActive, maskedKey) {
+  const badge = document.getElementById('llm-engine-badge');
+  const label = document.getElementById('gemini-status-label');
+  const sidePill = document.getElementById('insp-source-pill');
+  if (isActive) {
+    badge.className = 'sim-badge gemini-live';
+    badge.innerText = '✨ Gemini 2.5 Flash LLM Active';
+    label.innerHTML = `Connected to live <strong>Google Gemini 2.5 Flash</strong> (${maskedKey || 'Active'}). Every customer reply is analyzed in full multi-turn context!`;
+    sidePill.innerText = 'GEMINI 2.5 FLASH';
+  } else {
+    badge.className = 'sim-badge';
+    badge.innerText = 'Multi-Turn Conversational Engine Ready';
+    label.innerText = 'Paste your Google Gemini API key (AIza...) to power open-ended multi-turn Hinglish dialogue with gemini-2.5-flash (or chat immediately using the built-in multi-turn engine).';
+    sidePill.innerText = 'MULTI-TURN ENGINE';
+  }
+}
+
+function playTone(freq = 440, durationMs = 150) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.value = 0.05;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    setTimeout(() => { osc.stop(); ctx.close(); }, durationMs);
+  } catch (e) {}
+}
+
+function speakAgentText(text) {
+  if (!ttsEnabled || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.lang === 'hi-IN' || v.lang === 'en-IN' || v.name.toLowerCase().includes('india') || v.name.toLowerCase().includes('hindi'));
+    if (preferred) utter.voice = preferred;
+    utter.lang = preferred ? preferred.lang : 'hi-IN';
+    utter.rate = 1.02;
+    utter.onstart = () => {
+      document.getElementById('audio-status-text').innerText = 'Speaking Hinglish response...';
+    };
+    utter.onend = () => {
+      if (!isListening) document.getElementById('audio-status-text').innerText = 'Mic ready';
+    };
+    window.speechSynthesis.speak(utter);
+  } catch (e) {}
+}
+
+function toggleTTS() {
+  ttsEnabled = !ttsEnabled;
+  const btn = document.getElementById('btn-tts-toggle');
+  if (ttsEnabled) {
+    btn.classList.add('active');
+    btn.innerText = '🔊 Agent Voice TTS: ON';
+  } else {
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    btn.classList.remove('active');
+    btn.innerText = '🔇 Agent Voice TTS: OFF';
+  }
+}
+
+async function startMicVisualizer() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(micStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 32;
+    source.connect(analyser);
+    const bars = document.querySelectorAll('#waveform-bars .wave-bar');
+    const dataArr = new Uint8Array(analyser.frequencyBinCount);
+    function drawWave() {
+      if (!isListening) return;
+      analyser.getByteFrequencyData(dataArr);
+      bars.forEach((bar, i) => {
+        const val = dataArr[i % dataArr.length] || 20;
+        bar.style.height = `${Math.max(4, Math.min(22, Math.round((val / 255) * 22)))}px`;
+      });
+      animFrameId = requestAnimationFrame(drawWave);
+    }
+    drawWave();
+  } catch (err) {
+    const bars = document.querySelectorAll('#waveform-bars .wave-bar');
+    function fallbackWave() {
+      if (!isListening) return;
+      bars.forEach(bar => { bar.style.height = `${Math.floor(Math.random() * 18) + 4}px`; });
+      animFrameId = requestAnimationFrame(fallbackWave);
+    }
+    fallbackWave();
+  }
+}
+
+function stopMicVisualizer() {
+  if (animFrameId) cancelAnimationFrame(animFrameId);
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+  document.querySelectorAll('#waveform-bars .wave-bar').forEach(b => b.style.height = '4px');
+}
+
+function toggleMicrophone() {
+  if (callEnded) {
+    initCall();
+    return;
+  }
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) {
+    alert('Your browser does not support Web Speech API Microphone input (use Chrome or Edge).');
+    return;
+  }
+  if (isListening && recognition) {
+    recognition.stop();
+    return;
+  }
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  recognition = new SpeechRec();
+  recognition.lang = document.getElementById('speech-lang-select').value || 'en-IN';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('btn-mic-toggle').classList.add('listening');
+    document.getElementById('mic-btn-label').innerText = 'Listening... Speak Now';
+    document.getElementById('audio-status-text').innerText = 'Listening to microphone...';
+    playTone(587, 120);
+    startMicVisualizer();
+  };
+
+  recognition.onresult = (event) => {
+    let interim = '';
+    let finalTranscript = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+      else interim += event.results[i][0].transcript;
+    }
+    document.getElementById('cust-input').value = finalTranscript || interim;
+    if (finalTranscript.trim()) {
+      document.getElementById('audio-status-text').innerText = `Heard: "${finalTranscript.trim()}"`;
+      setTimeout(() => submitCustInput(), 220);
+    }
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('btn-mic-toggle').classList.remove('listening');
+    document.getElementById('mic-btn-label').innerText = 'Click to Speak (Mic Input)';
+    stopMicVisualizer();
+  };
+
+  recognition.start();
+}
+
+function logAudit(action, detail) {
+  const time = new Date().toTimeString().split(' ')[0];
+  const feed = document.getElementById('audit-feed');
+  const div = document.createElement('div');
+  div.className = 'audit-entry';
+  div.innerHTML = `<span class="audit-time">${time}</span> <strong>[${action}]</strong> ${detail}`;
+  feed.prepend(div);
+}
+
+function appendBubble(sender, text, sourceTag = '') {
+  const stream = document.getElementById('chat-stream');
+  const row = document.createElement('div');
+  row.className = `msg-row ${sender === 'Agent' ? 'msg-agent' : 'msg-user'}`;
+  
+  const label = document.createElement('div');
+  label.className = 'msg-label';
+  const senderSpan = document.createElement('span');
+  senderSpan.innerText = sender === 'Agent'
+    ? `Backstop Voice Agent${sourceTag === 'gemini-2.5-flash' ? ' · ✨ Gemini' : ''}`
+    : `Customer (${activeCustomerName})`;
+  label.appendChild(senderSpan);
+
+  if (sender === 'Agent') {
+    const replayBtn = document.createElement('button');
+    replayBtn.className = 'btn-replay-tts';
+    replayBtn.innerText = '🔊 Replay';
+    replayBtn.onclick = () => speakAgentText(text);
+    label.appendChild(replayBtn);
+  }
+  
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${sender === 'Agent' ? 'bubble-agent' : 'bubble-user'}`;
+  bubble.innerText = text;
+
+  row.appendChild(label);
+  row.appendChild(bubble);
+  stream.appendChild(row);
+  stream.scrollTop = stream.scrollHeight;
+}
+
+async function loadCasesDropdown() {
+  const params = new URLSearchParams(window.location.search);
+  const requestedCaseId = params.get('case_id');
+  const sel = document.getElementById('case-selector');
+  try {
+    const res = await fetch('/api/voice/cases');
+    const data = await res.json();
+    sel.innerHTML = data.cases.map(c => 
+      `<option value="${c.case_id}">${c.case_id} — ${c.customer_name} (₹${Number(c.amount).toLocaleString('en-IN')} · ${c.leak_type})</option>`
+    ).join('');
+    if (requestedCaseId && data.cases.some(c => c.case_id === requestedCaseId)) {
+      sel.value = requestedCaseId;
+    }
+    activeCaseId = sel.value;
+  } catch (e) {
+    sel.innerHTML = `<option value="CASE-20260001">CASE-20260001 — Rohan Gupta (₹14,500 · b2b_invoice)</option>`;
+    activeCaseId = "CASE-20260001";
+  }
+}
+
+async function onSelectCaseChange() {
+  activeCaseId = document.getElementById('case-selector').value;
+  await initCall();
+}
+
+async function initCall() {
+  callEnded = false;
+  document.getElementById('call-dot').style.background = "#10B981";
+  document.getElementById('call-status-badge').innerText = "CONNECTED · MULTI-TURN ACTIVE";
+  document.getElementById('chat-stream').innerHTML = '';
+  document.getElementById('insp-action-card').style.display = 'none';
+  document.getElementById('btn-sim-paylink').style.display = 'none';
+  document.getElementById('audit-feed').innerHTML = '';
+
+  playTone(480, 150);
+  const key = document.getElementById('gemini-api-key-input').value.trim();
+
+  try {
+    const res = await fetch('/api/voice/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ case_id: activeCaseId, api_key: key })
+    });
+    const data = await res.json();
+    activeCaseId = data.case.case_id;
+    activeCustomerName = data.case.customer_name;
+    activeAmount = data.case.amount;
+    currentState = data.case.state || "READY";
+
+    document.getElementById('cust-name').innerText = activeCustomerName;
+    document.getElementById('cust-phone').innerText = data.case.phone_masked;
+    document.getElementById('cust-amount').innerText = `Due: ₹${Number(activeAmount).toLocaleString('en-IN')}`;
+    document.getElementById('sn-from').innerText = currentState;
+    document.getElementById('sn-to').innerText = currentState;
+    document.getElementById('insp-intent').innerText = data.turn.detected_intent;
+    document.getElementById('insp-conf').innerText = "100%";
+    document.getElementById('insp-rule').innerText = data.turn.fired_policy_rule;
+
+    appendBubble('Agent', data.turn.agent_response, data.turn.llm_source);
+    speakAgentText(data.turn.agent_response);
+    logAudit("CALL_INIT", `Connected multi-turn call for ${activeCaseId} (${activeCustomerName}).`);
+  } catch (e) {}
+}
+
+function sendPreset(idx) {
+  if (callEnded) {
+    callEnded = false;
+    document.getElementById('call-dot').style.background = "#10B981";
+  }
+  processCustomerUtterance(PRESETS[idx]);
+}
+
+function submitCustInput() {
+  const input = document.getElementById('cust-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (callEnded) {
+    callEnded = false;
+    document.getElementById('call-dot').style.background = "#10B981";
+  }
+  input.value = '';
+  processCustomerUtterance(text);
+}
+
+async function processCustomerUtterance(text) {
+  appendBubble('Customer', text);
+  const key = document.getElementById('gemini-api-key-input').value.trim();
+
+  try {
+    const res = await fetch('/api/voice/step', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ case_id: activeCaseId, utterance: text, api_key: key })
+    });
+    const data = await res.json();
+    const turn = data.turn;
+    const nextState = data.case.state;
+
+    appendBubble('Agent', turn.agent_response, turn.llm_source);
+    speakAgentText(turn.agent_response);
+
+    document.getElementById('insp-intent').innerText = turn.detected_intent;
+    document.getElementById('insp-conf').innerText = `${(turn.confidence * 100).toFixed(1)}%`;
+    document.getElementById('insp-rule').innerText = turn.fired_policy_rule;
+    document.getElementById('insp-source-pill').innerText = turn.llm_source === 'gemini-2.5-flash' ? '✨ GEMINI 2.5 FLASH' : 'MULTI-TURN ENGINE';
+
+    document.getElementById('sn-from').innerText = currentState;
+    document.getElementById('sn-to').innerText = nextState;
+    currentState = nextState;
+
+    const card = document.getElementById('insp-action-card');
+    const payBtn = document.getElementById('btn-sim-paylink');
+
+    if (turn.dispatched_link) {
+      card.style.display = 'block';
+      card.className = 'outcome-box';
+      document.getElementById('action-title').innerText = 'Mid-Call WhatsApp PayLink Dispatched (Call Still Live)';
+      document.getElementById('action-desc').innerHTML = `Link: <strong>${turn.dispatched_link.pay_link}</strong> · Receipt: ${turn.dispatched_link.delivery_receipt.slice(0, 18)}...`;
+      payBtn.style.display = 'block';
+      payBtn.innerText = `Simulate Customer Clicking WhatsApp Link & Paying ₹${Number(activeAmount).toLocaleString('en-IN')}`;
+    } else if (turn.ptp_record) {
+      card.style.display = 'block';
+      card.className = 'outcome-box info';
+      document.getElementById('action-title').innerText = 'Promise-to-Pay (PTP) Locked in Ledger (Call Still Live)';
+      document.getElementById('action-desc').innerHTML = `Promised Date: <strong>${turn.ptp_record.promised_date}</strong> · Outreach Frozen`;
+    } else if (turn.dispute_task) {
+      card.style.display = 'block';
+      card.className = 'outcome-box debit';
+      document.getElementById('action-title').innerText = 'Outreach Frozen · Recon Task Added to Review Queue';
+      document.getElementById('action-desc').innerHTML = `Task ID: <strong>${turn.dispute_task.task_id}</strong> routed to ${turn.dispute_task.assigned_team}.`;
+    } else if (turn.detected_intent === 'OPT_OUT' || turn.detected_intent === 'ANGER_HOSTILITY') {
+      card.style.display = 'block';
+      card.className = 'outcome-box debit';
+      document.getElementById('action-title').innerText = 'Compliance Guardrail Triggered';
+      document.getElementById('action-desc').innerText = `Case ${activeCaseId} marked POLICY_BLOCKED in Command Center.`;
+    }
+
+    logAudit(turn.detected_intent, `[${turn.llm_source}] Rule: ${turn.fired_policy_rule} | State: ${nextState}`);
+
+    if (turn.call_ended) {
+      callEnded = true;
+      document.getElementById('call-dot').style.background = "#94A3B8";
+      document.getElementById('call-status-badge').innerText = `CALL ENDED SAFELY · ${nextState}`;
+    } else {
+      document.getElementById('call-status-badge').innerText = `IN CONVERSATION · ${nextState}`;
+    }
+  } catch (err) {}
+}
+
+async function simulateCustomerPaylinkPayment() {
+  try {
+    const res = await fetch('/api/voice/confirm_payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ case_id: activeCaseId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('sn-from').innerText = currentState;
+      document.getElementById('sn-to').innerText = 'RECOVERED';
+      currentState = 'RECOVERED';
+      document.getElementById('action-title').innerText = '✓ Payment Captured via Razorpay Webhook';
+      document.getElementById('action-desc').innerHTML = `₹${Number(data.amount_recovered).toLocaleString('en-IN')} credited to Net Recovered Revenue on Dashboard &amp; Executive Report.`;
+      document.getElementById('btn-sim-paylink').style.display = 'none';
+      playTone(880, 220);
+      logAudit("WEBHOOK_PAID", `Case ${activeCaseId} transitioned to RECOVERED (+₹${Number(data.amount_recovered).toLocaleString('en-IN')}).`);
+    }
+  } catch (e) {}
+}
+
+window.onload = async () => {
+  if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
+  await checkGeminiConfig();
+  await loadCasesDropdown();
+  await initCall();
+};
+</script>
+</body>
+</html>

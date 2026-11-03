@@ -1,0 +1,10 @@
+venv/
+.env
+__pycache__/
+*.pyc
+data/creditcard.csv
+models/recovery_ledger.db
+models/recovery_ledger.db-*
+.coverage
+.pytest_cache/
+.pytest-tmp/
